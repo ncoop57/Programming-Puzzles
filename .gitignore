@@ -1,0 +1,7 @@
+# all the eclipse stuff
+.metadata
+.recommenders
+.settings
+.classpath
+.project
+bin
