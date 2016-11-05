@@ -1,25 +1,31 @@
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.Scanner;
 
 public class Main
 {
 	
-	Node[] graph;
+	Node[][] graph;
+	Wall[] walls;
 	
 	private class Node
 	{
+		
 		private ArrayList<Edge> adjList;
-		private int num;
+		
+		private int column;
+		private int row;
 		private int layer;
 		
 		private boolean visited;
 		
-		public Node(int num)
+		public Node(int column, int row)
 		{
 			
 			adjList = new ArrayList<Edge>();
-			this.num = num;
+			this.column = column;
+			this.row = row;
 			this.layer = 0;
 			visited = false;
 			
@@ -30,67 +36,114 @@ public class Main
 	/** Used to connect nodes to each other */
 	private class Edge
 	{
+
+		private int to_column;
+		private int to_row;
 		
-		private int to;
-		
-		public Edge(int to)
+		public Edge(int to_column, int to_row)
 		{
 			
-			this.to = to;
+			this.to_column = to_column;
+			this.to_row = to_row;
 			
 		}
 		
 	}
+	
+	private class Wall
+	{
+		
+		int start_column;
+		int start_row;
+		
+		int end_column;
+		int end_row;
+		
+		boolean isVertical = false;
+		boolean isHorizontal = false;
+		
+		public Wall(int start_column, int start_row, int end_column, int end_row)
+		{
+			
+			if(start_column == end_column)
+				isVertical = true;
+			else isHorizontal = true;
+			
+			this.start_column = start_column;
+			this.start_row = start_row;
+			
+			this.end_column = end_column;
+			this.end_row = end_row;
+			
+		}
+		
+	}
+	
+	
 	
 	/** Initialize the entire nodes that are in the graph */
 	private void initGraph(int num)
 	{
 		
-		graph = new Node[num];
+		graph = new Node[num][num];
+		
+		for(int i = 0; i < num; i++)
+			for(int j = 0; j < num; j++)
+				graph[i][j] = new Node(i, j);
+		
+	}
+	
+	private void initWalls(int num, Scanner sc)
+	{
+		
+
+		walls = new Wall[num];
 		
 		for(int i = 0; i < num; i++)
 		{
-			
-			graph[i] = new Node(i);
-			
+			walls[i] = new Wall(sc.nextInt(), sc.nextInt(), sc.nextInt(), sc.nextInt());
+			//System.out.println(walls[i].start_column + " " + walls[i].start_row + " " + walls[i].end_column + " " + walls[i].end_row);
 		}
 		
 	}
 	
-	
-	private void addEdge(int start, int to)
+	private void addEdge(int start_column, int start_row, int to_column, int to_row)
 	{
 		
-		graph[start].adjList.add(new Edge(to));
-		graph[to].adjList.add(new Edge(start));
+		graph[start_column][start_row].adjList.add(new Edge(to_column, to_row));
+		graph[to_column][to_row].adjList.add(new Edge(start_column, start_row));
 		
 	}
 	
-	private int bfs(int start, int end)
+	private int bfs(int column, int row, int end_column, int end_row)
 	{
 		
-		Queue<Integer> queue = new LinkedList<Integer>();
-		int current = -1;
+		Queue<Node> queue = new LinkedList<Node>();
+		Node current = null;
 		
-		graph[start].layer = 0;
+		for(int i = 0; i < graph.length; i++)
+			for(Node node : graph[i])
+				node.visited = false;
 		
-		queue.add(start);
+		graph[column][row].layer = 0;
+		
+		queue.add(graph[column][row]);
 		
 		while(!queue.isEmpty())
 		{
 			
 			current = queue.peek();
-			graph[current].visited = true;
+			current.visited = true;
 			
-			for(Edge edge : graph[current].adjList)
+			for(Edge edge : current.adjList)
 			{
 				
-				if(!graph[edge.to].visited)
+				if(!graph[edge.to_column][edge.to_row].visited)
 				{
 					
-					queue.add(graph[edge.to].num);
-					graph[edge.to].visited = true;
-					graph[edge.to].layer = graph[current].layer = 1;
+					queue.add(graph[edge.to_column][edge.to_row]);
+					graph[edge.to_column][edge.to_row].visited = true;
+					graph[edge.to_column][edge.to_row].layer = current.layer + 1;
 					
 				}
 				
@@ -99,11 +152,113 @@ public class Main
 			queue.poll();
 			
 		}
-	
-		for(Node node: graph)
-			System.out.print(node.layer + " ");
+		/*
+		for(int i = 0; i < graph.length; i++)
+			for(Node node: graph[i])
+				System.out.print(node.layer + " "); */
 		
-		return graph[end].layer;
+		return graph[end_column][end_row].layer;
+		
+	}
+	
+	private void findPath(int start_column, int start_row, int end_column, int end_row)
+	{
+		
+		Node bestNode = graph[start_column][start_row];
+		while(bfs(bestNode.column, bestNode.row, end_column, end_row) != 0)
+		{
+
+			for(Edge edge : bestNode.adjList)
+			{
+				
+				int bestLayer = bfs(bestNode.column, bestNode.row, end_column, end_row);
+				int edgeLayer = bfs(edge.to_column, edge.to_row, end_column, end_row);
+				
+				//System.out.println("Best Layer: " + bestNode.layer + " Test Layer: " + testLayer);
+				if(bestLayer > edgeLayer)
+				{
+					
+					if(bestNode.column - edge.to_column == 0)
+					{
+						if(bestNode.row > edge.to_row)
+						{
+							System.out.print("N");
+						}
+						else System.out.print("S");
+					}
+					else
+					{
+						
+						if(bestNode.column > edge.to_column)
+						{
+							System.out.print("W");
+						}
+						else System.out.print("E");
+						
+					}
+					
+					bestNode = graph[edge.to_column][edge.to_row];
+					
+				}
+				
+				
+				
+			}
+			
+			
+		}
+		
+		System.out.println("");
+		
+	}
+	
+	private boolean canConnect(double start_column, double start_row, double to_column, double to_row)
+	{
+		
+		boolean connection = true;
+		
+		for(int i = 0; i < walls.length; i++)
+		{
+			
+			if(walls[i].isHorizontal)
+			{
+				
+				//System.out.println(start_column + " " + walls[i].start_column + " " + walls[i].end_column);
+				//if(start_row == to_row)
+					//continue;
+				if(start_column > walls[i].start_column && start_column < walls[i].end_column)
+				{
+					/*
+					System.out.println("Made it past Stage 1 Horizontal:");
+					System.out.println(start_column + " " + walls[i].start_column + " " + walls[i].end_column);
+					System.out.println(start_row + " " + to_row + " " + walls[i].start_row);*/
+					if(start_row > walls[i].start_row && to_row < walls[i].end_row || start_row < walls[i].start_row && to_row > walls[i].end_row)
+						connection = false;
+				}
+			}
+			else
+			{
+				
+				//System.out.println(start_row + " " + walls[i].start_row + " " + walls[i].end_row);
+				//if(start_column == to_column)
+					//continue;
+				if(start_row > walls[i].start_row && start_row < walls[i].end_row)
+				{
+					/*
+					System.out.println("Made it past Stage 1 Vertical:");
+					System.out.println(start_row + " " + walls[i].start_row + " " + walls[i].end_row);
+					System.out.println(start_column + " " + to_column + " " + walls[i].start_column);*/
+					if(start_column < walls[i].start_column && to_column > walls[i].end_column || start_column > walls[i].start_column && to_column < walls[i].end_column)
+						connection = false;
+				}
+				
+			}
+			
+		}
+		
+		//System.out.println(connection);
+		
+		return connection;
 		
 	}
 	
@@ -111,24 +266,64 @@ public class Main
 	{
 		
 		Main main = new Main();
-		int graphSize = 36;
+		Scanner sc = new Scanner(System.in);
 		
-		main.initGraph(graphSize);
+		int columnSize = 6;
+		int rowSize = 6;
+		int wallSize = 3;
 		
-		for(int i = 0; i < graphSize - 1; i++)
+		int start_column = sc.nextInt() - 1;
+		int start_row = sc.nextInt() - 1 ;
+
+		while(start_column != -1 || start_row != -1)
 		{
 			
-				main.addEdge(i, i + 1);
+			main.initGraph(columnSize);
 			
-			/*
-			if(i > 5)
-			{
-				main.addEdge(i - 6, i);
-				main.addEdge(i, i - 6);
-			}*/
+			int end_column = sc.nextInt() - 1;
+			int end_row = sc.nextInt() - 1;
+			
+			main.initWalls(wallSize, sc);
+			
+			for(int i = 0; i < rowSize; i++)
+				for(int j = 0; j < columnSize - 1; j++)
+				{
+					
+					if(i > 0 && main.canConnect(j + 0.5, i + 0.5, j + 0.5, i - 1 + 0.5) && main.canConnect(j + 0.5, i - 1 + 0.5, j + 0.5, i + 0.5))
+					{
+						
+						main.addEdge(j, i, j, i - 1);
+						main.addEdge(j, i - 1, j, i);
+						
+					}
+					
+					if(main.canConnect(j + 0.5, i + 0.5, j + 1 + 0.5, i + 0.5) && main.canConnect(j + 1 + 0.5, i + 0.5, j + 0.5, i + 0.5))
+					{
+						
+						main.addEdge(j, i, j + 1, i);
+						main.addEdge(j + 1, i, j, i);
+						
+					}
+					
+					
+					
+				}
+			
+			
+			
+			//main.findPath(start_column, start_row, end_column, end_row);
+			System.out.println("That node is only " + main.bfs(start_column, start_row, end_column, end_row) + " layers away!");
+			/*for(int i = 0; i < main.graph.length; i++)
+				for(Node node : main.graph[i])
+					for(Edge e : node.adjList)
+						System.out.printf("Node: %d, %d Edge: %d, %d\n", node.column, node.row, e.to_column, e.to_row);*/
+				
+			start_column = sc.nextInt() - 1;
+			start_row = sc.nextInt() - 1;
+			
+			
 		}
 		
-		System.out.printf("That is only %d layers away!", main.bfs(0, 10));
 
 	}
 
